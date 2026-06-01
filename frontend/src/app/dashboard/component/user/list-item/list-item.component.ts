@@ -19,7 +19,6 @@
 
 import {
   ChangeDetectorRef,
-  Component,
   ElementRef,
   EventEmitter,
   Input,
@@ -28,6 +27,7 @@ import {
   SimpleChanges,
   ViewChild,
 } from "@angular/core";
+import { Component } from "@angular/core";
 import { UntilDestroy, untilDestroyed } from "@ngneat/until-destroy";
 import { NzModalRef, NzModalService } from "ng-zorro-antd/modal";
 import { DashboardEntry } from "src/app/dashboard/type/dashboard-entry";
@@ -42,6 +42,7 @@ import { HubWorkflowDetailComponent } from "../../../../hub/component/workflow/d
 import { ActionType, HubService } from "../../../../hub/service/hub.service";
 import { DownloadService } from "src/app/dashboard/service/user/download/download.service";
 import { formatSize } from "src/app/common/util/size-formatter.util";
+import { formatCount, formatRelativeTime } from "src/app/common/util/format.util";
 import { DatasetService, DEFAULT_DATASET_NAME } from "../../../service/user/dataset/dataset.service";
 import { NotificationService } from "../../../../common/service/notification/notification.service";
 import {
@@ -52,12 +53,40 @@ import {
   DASHBOARD_USER_WORKSPACE,
 } from "../../../../app-routing.constant";
 import { isDefined } from "../../../../common/util/predicate";
+import { NzCardComponent } from "ng-zorro-antd/card";
+import { NzRowDirective, NzColDirective } from "ng-zorro-antd/grid";
+import { RouterLink } from "@angular/router";
+import { NgIf, NgClass } from "@angular/common";
+import { ɵNzTransitionPatchDirective } from "ng-zorro-antd/core/transition-patch";
+import { NzIconDirective } from "ng-zorro-antd/icon";
+import { NzSpaceCompactItemDirective } from "ng-zorro-antd/space";
+import { NzButtonComponent } from "ng-zorro-antd/button";
+import { FormsModule } from "@angular/forms";
+import { UserAvatarComponent } from "../user-avatar/user-avatar.component";
+import { NzWaveDirective } from "ng-zorro-antd/core/wave";
+import { NzPopconfirmDirective } from "ng-zorro-antd/popconfirm";
 
 @UntilDestroy()
 @Component({
   selector: "texera-list-item",
   templateUrl: "./list-item.component.html",
   styleUrls: ["./list-item.component.scss"],
+  imports: [
+    NzCardComponent,
+    NzRowDirective,
+    RouterLink,
+    NzColDirective,
+    NgIf,
+    NgClass,
+    ɵNzTransitionPatchDirective,
+    NzIconDirective,
+    NzSpaceCompactItemDirective,
+    NzButtonComponent,
+    FormsModule,
+    UserAvatarComponent,
+    NzWaveDirective,
+    NzPopconfirmDirective,
+  ],
 })
 export class ListItemComponent implements OnChanges {
   private owners: number[] = [];
@@ -344,31 +373,7 @@ export class ListItemComponent implements OnChanges {
     }
   }
 
-  formatTime(timestamp: number | undefined): string {
-    if (timestamp === undefined) {
-      return "Unknown"; // Return "Unknown" if the timestamp is undefined
-    }
-
-    const currentTime = new Date().getTime();
-    const timeDifference = currentTime - timestamp;
-
-    const minutesAgo = Math.floor(timeDifference / (1000 * 60));
-    const hoursAgo = Math.floor(timeDifference / (1000 * 60 * 60));
-    const daysAgo = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-    const weeksAgo = Math.floor(daysAgo / 7);
-
-    if (minutesAgo < 60) {
-      return `${minutesAgo} minutes ago`;
-    } else if (hoursAgo < 24) {
-      return `${hoursAgo} hours ago`;
-    } else if (daysAgo < 7) {
-      return `${daysAgo} days ago`;
-    } else if (weeksAgo < 4) {
-      return `${weeksAgo} weeks ago`;
-    } else {
-      return new Date(timestamp).toLocaleDateString();
-    }
-  }
+  formatRelativeTime = formatRelativeTime;
 
   openDetailModal(wid: number | undefined): void {
     const modalRef = this.modal.create({
@@ -378,7 +383,7 @@ export class ListItemComponent implements OnChanges {
         wid: wid ?? 0,
       },
       nzFooter: null,
-      nzStyle: { width: "60%" },
+      nzWidth: "max(900px, 60vw)",
       nzBodyStyle: { maxHeight: "70vh", overflow: "auto" },
     });
 
@@ -437,12 +442,7 @@ export class ListItemComponent implements OnChanges {
     }
   }
 
-  formatCount(count: number): string {
-    if (count >= 1000) {
-      return (count / 1000).toFixed(1) + "k";
-    }
-    return count.toString();
-  }
+  formatCount = formatCount;
 
   // alias for formatSize
   formatSize = formatSize;

@@ -19,12 +19,46 @@ ThisBuild / organization := "org.apache.texera"
 ThisBuild / version      := "1.1.0-incubating"
 ThisBuild / scalaVersion := "2.13.18"
 
+// Pull JDK 17+ JVM flags from .jvmopts so every JVM the build launches sees the same list.
+import com.typesafe.sbt.packager.universal.UniversalPlugin.autoImport.Universal
+ThisBuild / Test / javaOptions ++=
+  JdkOptions.jvmFlags((ThisBuild / baseDirectory).value)
+
+// Fail Java compilation on deprecation warnings so PRs can't reintroduce
+// deprecated-API patterns (e.g. scala.collection.JavaConverters in Java
+// callers — the modern Java entry point is scala.jdk.javaapi.CollectionConverters).
+// -Xlint:deprecation surfaces the per-call-site location, -Werror turns it fatal.
+ThisBuild / Compile / javacOptions ++= Seq("-Xlint:deprecation", "-Werror")
+// Emit one JUnit-XML file per spec under each module's target/test-reports/.
+// Codecov Test Analytics ingests these via `report_type: test_results` to
+// surface failing-test stack traces in PR comments and flag tests that have
+// gone flaky on main. ScalaTest's `-u` argument is additive — module-level
+// testOptions (e.g. amber/build.sbt's filter args) continue to apply.
+ThisBuild / Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-u", "target/test-reports")
+
+// sbt-jacoco emits only HTML by default; add XML so Codecov can consume
+// per-module jacoco.xml at target/scala-2.13/jacoco/report/jacoco.xml.
+// JacocoPlugin defines a project-scoped default that overrides ThisBuild,
+// so this Seq is bundled into asfLicensingSettings (applied to every module).
+import com.github.sbt.jacoco.report.{JacocoReportFormats, JacocoReportSettings}
+lazy val coverageReportSettings = Seq(
+  jacocoReportSettings := JacocoReportSettings()
+    .withTitle("Apache Texera Coverage")
+    .withFormats(JacocoReportFormats.ScalaHTML, JacocoReportFormats.XML)
+)
+
+lazy val universalJvmFlagsSettings = Seq(
+  Universal / javaOptions ++=
+    JdkOptions.jvmFlags((ThisBuild / baseDirectory).value).map("-J" + _)
+)
+
 // Per-module ASF licensing: each jar's META-INF/LICENSE describes only what is in that jar.
 // Modules without vendored code get Apache 2.0 only; workflow-operator includes mbknor attribution.
 // See project/AddMetaInfLicenseFiles.scala.
-lazy val asfLicensingSettings = AddMetaInfLicenseFiles.defaultSettings
-lazy val asfLicensingSettingsWithVendored = AddMetaInfLicenseFiles.workflowOperatorSettings
-lazy val asfDistLicensingSettings = AddMetaInfLicenseFiles.distSettings
+// Dist-producing modules additionally override Universal / mappings in their own
+// build.sbt (not here) — see AddMetaInfLicenseFiles.distMappings.
+lazy val asfLicensingSettings = AddMetaInfLicenseFiles.defaultSettings ++ coverageReportSettings ++ universalJvmFlagsSettings
+lazy val asfLicensingSettingsWithVendored = AddMetaInfLicenseFiles.workflowOperatorSettings ++ coverageReportSettings ++ universalJvmFlagsSettings
 
 val jacksonVersion = "2.18.6"
 
@@ -36,7 +70,6 @@ lazy val Auth = (project in file("common/auth"))
 lazy val ConfigService = (project in file("config-service"))
   .dependsOn(Auth, Config)
   .settings(asfLicensingSettings)
-  .settings(asfDistLicensingSettings)
   .settings(
     dependencyOverrides ++= Seq(
       // override it as io.dropwizard 4 require 2.16.1 or higher
@@ -46,7 +79,6 @@ lazy val ConfigService = (project in file("config-service"))
 lazy val AccessControlService = (project in file("access-control-service"))
   .dependsOn(Auth, Config, DAO)
   .settings(asfLicensingSettings)
-  .settings(asfDistLicensingSettings)
   .settings(
     dependencyOverrides ++= Seq(
       // override it as io.dropwizard 4 require 2.16.1 or higher
@@ -71,7 +103,6 @@ lazy val WorkflowCore = (project in file("common/workflow-core"))
 lazy val ComputingUnitManagingService = (project in file("computing-unit-managing-service"))
   .dependsOn(WorkflowCore, Auth, Config)
   .settings(asfLicensingSettings)
-  .settings(asfDistLicensingSettings)
   .settings(
     dependencyOverrides ++= Seq(
       // override it as io.dropwizard 4 require 2.16.1 or higher
@@ -80,7 +111,6 @@ lazy val ComputingUnitManagingService = (project in file("computing-unit-managin
   )
 lazy val FileService = (project in file("file-service"))
   .settings(asfLicensingSettings)
-  .settings(asfDistLicensingSettings)
   .dependsOn(WorkflowCore, Auth, Config)
   .configs(Test)
   .dependsOn(DAO % "test->test") // test scope dependency
@@ -95,9 +125,8 @@ lazy val FileService = (project in file("file-service"))
 
 lazy val WorkflowOperator = (project in file("common/workflow-operator")).settings(asfLicensingSettingsWithVendored).dependsOn(WorkflowCore)
 lazy val WorkflowCompilingService = (project in file("workflow-compiling-service"))
-  .dependsOn(WorkflowOperator, Config)
+  .dependsOn(WorkflowOperator, Auth, Config)
   .settings(asfLicensingSettings)
-  .settings(asfDistLicensingSettings)
   .settings(
     dependencyOverrides ++= Seq(
       // override it as io.dropwizard 4 require 2.16.1 or higher
@@ -110,7 +139,6 @@ lazy val WorkflowCompilingService = (project in file("workflow-compiling-service
 lazy val WorkflowExecutionService = (project in file("amber"))
   .dependsOn(WorkflowOperator, Auth, Config)
   .settings(asfLicensingSettings)
-  .settings(asfDistLicensingSettings)
   .settings(
     dependencyOverrides ++= Seq(
       "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
@@ -143,15 +171,18 @@ lazy val WorkflowExecutionService = (project in file("amber"))
 // root project definition
 lazy val TexeraProject = (project in file("."))
   .aggregate(
-    DAO,
-    Config,
-    ConfigService,
-    AccessControlService,
+    // common libraries
     Auth,
+    Config,
+    DAO,
+    PyBuilder,
     WorkflowCore,
-    ComputingUnitManagingService,
-    FileService,
     WorkflowOperator,
+    // services
+    AccessControlService,
+    ComputingUnitManagingService,
+    ConfigService,
+    FileService,
     WorkflowCompilingService,
     WorkflowExecutionService
   )

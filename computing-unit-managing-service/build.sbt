@@ -22,8 +22,25 @@ name := "computing-unit-managing-service"
 
 enablePlugins(JavaAppPackaging)
 
+// Ship LICENSE-binary, NOTICE-binary, DISCLAIMER, and the licenses/
+// directory at the top of the Universal dist zip.
+// See project/AddMetaInfLicenseFiles.scala.
+Universal / mappings := AddMetaInfLicenseFiles.distMappings(
+  (Universal / mappings).value,
+  (ThisBuild / baseDirectory).value,
+  baseDirectory.value / "LICENSE-binary",
+  baseDirectory.value / "NOTICE-binary"
+)
+
 // Dependency Versions
 val dropwizardVersion = "4.0.7"
+val mockitoVersion = "5.4.0"
+
+// Test Dependencies
+libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "3.2.17" % Test,
+  "org.mockito" % "mockito-core" % mockitoVersion % Test
+)
 
 // Dependencies
 libraryDependencies ++= Seq(
