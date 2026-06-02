@@ -38,7 +38,6 @@ import org.apache.texera.amber.engine.architecture.controller.execution.{
 }
 import org.apache.texera.amber.engine.architecture.controller.{
   ControllerConfig,
-  ExecutionStateUpdate,
   ExecutionStatsUpdate,
   RuntimeStatisticsPersist,
   WorkerAssignmentUpdate
@@ -176,7 +175,7 @@ class RegionExecutionCoordinator(
   private def recordCachedOutputPortResults(resourceConfig: ResourceConfig): Unit = {
     resourceConfig.portConfigs.collect {
       case (gpid, cfg: OutputPortConfig) =>
-        val storageUri = cfg.storageURI
+        val storageUri = VFSURIFactory.resultURI(cfg.storageURIBase)
         WorkflowExecutionsResource.insertOperatorPortResultUri(
           eid = executionId,
           globalPortId = gpid,
@@ -598,7 +597,7 @@ class RegionExecutionCoordinator(
         WorkflowExecutionsResource.insertOperatorPortResultUri(
           eid = executionId,
           globalPortId = outputPortId,
-          uri = outputCfg.storageURI
+          uri = VFSURIFactory.resultURI(outputCfg.storageURIBase)
         )
       case _ =>
     }

@@ -125,8 +125,8 @@
   </li>
   <li
     nz-menu-item
-    *ngIf="operatorMenuService.highlightedOperators.value.length === 1 &&
-  operatorMenuService.highlightedCommentBoxes.value.length === 0 &&
+    *ngIf="highlightedOperatorIds.length === 1 &&
+  highlightedCommentBoxIds.length === 0 &&
   !hasHighlightedLinks() &&
   isWorkflowModifiable"
     (click)="clearCacheForSelectedOperator()">
@@ -138,8 +138,8 @@
   </li>
   <li
     nz-menu-item
-    *ngIf="highlightedOperators.value.length === 1 &&
-    highlightedCommentBoxes.value.length === 0 &&
+    *ngIf="highlightedOperatorIds.length === 1 &&
+  highlightedCommentBoxIds.length === 0 &&
   !hasHighlightedLinks() &&
   isWorkflowModifiable"
     (click)="clearCacheUpToSelectedOperator()">

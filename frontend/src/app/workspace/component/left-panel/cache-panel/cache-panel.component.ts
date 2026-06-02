@@ -19,6 +19,15 @@
 
 import { Component, OnInit } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
+import { CommonModule } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+import { NzButtonModule } from "ng-zorro-antd/button";
+import { NzPopconfirmModule } from "ng-zorro-antd/popconfirm";
+import { NzSwitchModule } from "ng-zorro-antd/switch";
+import { NzAlertModule } from "ng-zorro-antd/alert";
+import { NzTableModule } from "ng-zorro-antd/table";
+import { NzTagModule } from "ng-zorro-antd/tag";
+import { NzEmptyModule } from "ng-zorro-antd/empty";
 import { finalize, tap } from "rxjs/operators";
 import { UntilDestroy, untilDestroyed } from "@ngneat/until-destroy";
 import { WorkflowCacheEntry } from "../../../../dashboard/type/workflow-cache-entry";
@@ -39,6 +48,17 @@ import {
   selector: "texera-cache-panel",
   templateUrl: "cache-panel.component.html",
   styleUrls: ["cache-panel.component.scss"],
+  imports: [
+    CommonModule,
+    FormsModule,
+    NzButtonModule,
+    NzPopconfirmModule,
+    NzSwitchModule,
+    NzAlertModule,
+    NzTableModule,
+    NzTagModule,
+    NzEmptyModule,
+  ],
 })
 export class CachePanelComponent implements OnInit {
   public cacheEntries: WorkflowCacheEntry[] = [];

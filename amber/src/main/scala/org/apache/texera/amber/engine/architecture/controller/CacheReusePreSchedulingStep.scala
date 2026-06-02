@@ -19,6 +19,7 @@
 
 package org.apache.texera.amber.engine.architecture.controller
 
+import org.apache.texera.amber.core.storage.VFSURIFactory
 import org.apache.texera.amber.core.virtualidentity.PhysicalOpIdentity
 import org.apache.texera.amber.core.workflow.{
   CachedOutput,
@@ -200,6 +201,22 @@ object CacheReusePreSchedulingStep {
   }
 
   /**
+    * Cache entries persist the `/result` leaf URI, but scheduling port configs and the input-port
+    * materialization readers expect the port *base* URI: they derive `resultURI`/`stateURI` from it
+    * via `VFSURIFactory`. Reconstruct the base from a cached `/result` URI so reuse-only ports line
+    * up with the (post state-materialization) base/result/state storage layout.
+    */
+  private def portBaseURIOf(cachedResultUri: URI): URI = {
+    val (workflowId, executionId, globalPortIdOpt, _) = VFSURIFactory.decodeURI(cachedResultUri)
+    val globalPortId = globalPortIdOpt.getOrElse(
+      throw new IllegalArgumentException(
+        s"Cached result URI is missing a globalPortId: $cachedResultUri"
+      )
+    )
+    VFSURIFactory.createPortBaseURI(workflowId, executionId, globalPortId)
+  }
+
+  /**
     * Prepare generic planning hints for CostBasedScheduleGenerator.
     */
   private def buildPlanningHints(
@@ -214,7 +231,7 @@ object CacheReusePreSchedulingStep {
       .flatMap { pid =>
         cachedOutputsByPort.get(pid).map { cached =>
           pid -> OutputPortConfig(
-            storageURI = cached.resultUri,
+            storageURIBase = portBaseURIOf(cached.resultUri),
             cachedTupleCount = cached.tupleCount,
             materialize = false
           )
@@ -230,7 +247,7 @@ object CacheReusePreSchedulingStep {
           val outputPort = GlobalPortIdentity(link.fromOpId, link.fromPortId)
           cachedOutputsByPort.get(outputPort) match {
             case Some(cached) =>
-              val uris = acc.getOrElse(inputPort, List.empty) :+ cached.resultUri
+              val uris = acc.getOrElse(inputPort, List.empty) :+ portBaseURIOf(cached.resultUri)
               acc.updated(inputPort, uris)
             case None =>
               acc
@@ -265,7 +282,7 @@ object CacheReusePreSchedulingStep {
         .flatMap { outputPort =>
           cachedOutputsByPort.get(outputPort).map { cached =>
             outputPort -> OutputPortConfig(
-              storageURI = cached.resultUri,
+              storageURIBase = portBaseURIOf(cached.resultUri),
               cachedTupleCount = cached.tupleCount,
               materialize = false
             )

@@ -423,9 +423,6 @@ export class JointUIService {
       if (portId != null) {
         const parts = portId.split("-");
         const numericSuffix = parts.length > 1 ? parts[1] : portId;
-        const count: number = inputMetrics[numericSuffix] ?? 0;
-        element.portProp(portId, "attrs/.port-label/text", count.toLocaleString());
-
         const count = inputMetrics[numericSuffix];
         const rawAttrs = (portDef.attrs as any) || {};
         const oldText: string = (rawAttrs[".port-label"] && rawAttrs[".port-label"].text) || "";
@@ -448,7 +445,6 @@ export class JointUIService {
         const parts = portId.split("-");
         const numericSuffix = parts.length > 1 ? parts[1] : portId;
         const count: number = outputMetrics[numericSuffix] ?? 0;
-        element.portProp(portId, "attrs/.port-label/text", count.toLocaleString());
         const rawAttrs = (portDef.attrs as any) || {};
         const oldText: string = (rawAttrs[".port-label"] && rawAttrs[".port-label"].text) || "";
         let originalName = oldText.includes(":") ? oldText.split(":", 1)[0].trim() : oldText;
@@ -840,40 +836,6 @@ export class JointUIService {
         },
       },
     ];
-  }
-
-  /**
-   * This function create a custom svg style for the operator
-   * @returns the custom attributes of the tooltip.
-   */
-  public static getCustomOperatorStatusTooltipStyleAttrs(): joint.shapes.devs.ModelSelectors {
-    return {
-      "element-node": {
-        style: { "pointer-events": "none" },
-      },
-      polygon: {
-        fill: "#FFFFFF",
-        "follow-scale": true,
-        stroke: "purple",
-        "stroke-width": "2",
-        rx: "5px",
-        ry: "5px",
-        refPoints: "0,30 150,30 150,120 85,120 75,150 65,120 0,120",
-        display: "none",
-        style: { "pointer-events": "none" },
-      },
-      "#operatorCount": {
-        fill: "#595959",
-        "font-size": "12px",
-        ref: "polygon",
-        "y-alignment": "middle",
-        "x-alignment": "left",
-        "ref-x": 0.05,
-        "ref-y": 0.2,
-        display: "none",
-        style: { "pointer-events": "none" },
-      },
-    };
   }
 
   /**
